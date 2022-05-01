@@ -1,6 +1,6 @@
 import rospy
 import cv2
-from cv2 import COLOR_BGR2HSV, waitKey, namedWindow, cvtColor, imshow, inRange,findContours,RETR_TREE, CHAIN_APPROX_SIMPLE
+from cv2 import COLOR_BGR2HSV, waitKey, namedWindow, cvtColor, imshow,findContours,RETR_TREE, CHAIN_APPROX_SIMPLE
 import numpy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -25,6 +25,7 @@ class MoveColour:
         #create the image window
         namedWindow("Image window")
         namedWindow("mask")
+        namedWindow("HSV")
         #Convert the sensor data to op[en cv imge using the bridge and store in variable
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
@@ -35,32 +36,34 @@ class MoveColour:
         hsv_img = cvtColor(cv_image, COLOR_BGR2HSV)
         img = cvtColor(cv_image, COLOR_BGR2HSV)
         #numpy arry for colour ranges 
+        #all
+        all = numpy.array([255, 255, 255])
+        low_all = numpy.array([0, 0, 0])
+
         #red
-        red = numpy.array([10, 50, 255])
+        red = numpy.array([0, 0, 255])
         low_red = numpy.array([0, 0, 0])
 
         green = numpy.array([0, 255, 0])
-        dark_green = numpy.array([0, 128, 0])
+        low_green = numpy.array([0, 100, 0])
         #blue
         blue = numpy.array([255, 0, 0])
-        darkblue = numpy.array([128, 0, 0])
+        darkblue = numpy.array([100, 0, 0])
         #yellow
         lower_yellow = numpy.array([10, 60, 170])
         upper_yellow = numpy.array([255, 255, 255])
 
+        mask = cv2.inRange(cv_image, low_all, all)
+
+        #mask = cv2.bitwise_and(cv_image, cv_image, mask=mask)
         #crete  mask lookign for colours between the ranges given
-        identify_red = inRange(hsv_img, low_red, red)
-        cv2.bitwise_and(cv_image, cv_image, mask=identify_red)
-        #identify_green = inRange(hsv_img, dark_green, green)
+        identify_red = cv2.inRange(cv_image, low_red, red)
+      
+
+        #cv2.bitwise_and(cv_image, cv_image, mask=identify_red)
+        identify_green = cv2.inRange(cv_image, low_green, green)
         #identify_blue = inRange(hsv_img, darkblue, blue)
         #identify_yellow = inRange(hsv_img, lower_yellow, upper_yellow)
-
-        #finds the contours within the range given
-        _, red_hsv_contours, hierachy = findContours(identify_red.copy(),RETR_TREE,CHAIN_APPROX_SIMPLE)
-      #  _, green_hsv_contours, hierachy = findContours(identify_green.copy(),RETR_TREE,CHAIN_APPROX_SIMPLE)
-      #  _, blue_hsv_contours, hierachy = findContours(identify_blue.copy(),RETR_TREE,CHAIN_APPROX_SIMPLE)
-      #  _, yellow_hsv_contours, hierachy = findContours(identify_yellow.copy(),RETR_TREE,CHAIN_APPROX_SIMPLE)
-
 
         #getting the dimensions of the image
         x, y, z = cv_image.shape
@@ -73,36 +76,42 @@ class MoveColour:
         search_bot = search_top + 20
 
         #cuts out part of the image so that the robot isnt identified
-        identify_red[0:search_top, 0:y] = 0
-        identify_red[search_bot:x, 0:y] = 0
+        mask[0:search_top, 0:y] = 0
+        mask[search_bot:x, 0:y] = 0
 
-
-        M = cv2.moments(identify_red)
-        if M['m00'] > 0:
+        R = cv2.moments(identify_red)
+        G = cv2.moments(identify_green)
+        
+        if R['m00'] > 0:
             # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
-            cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
+            cx = int(R['m10']/R['m00'])
+            cy = int(R['m01']/R['m00'])
+            #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
             print("red")
+
+            err = cx - y/2
+            twist.linear.x = 0.2
+            twist.angular.z = float(err) / 100
+            print(twist.angular.z)
+
+            self.publisher.publish(twist)
+        elif G['m00'] > 0:
+            # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
+            cx = int(G['m10']/G['m00'])
+            cy = int(G['m01']/G['m00'])
+            #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
+            print("green")
 
             err = cx - y/2
             twist.linear.x = 0.2
             twist.angular.z = -float(err) / 100
             print(twist.angular.z)
-
             self.publisher.publish(twist)
-
-        for c in red_hsv_contours:
-            # This allows to compute the area (in pixels) of a contour
-            a = cv2.contourArea(c)
-            # and if the area is big enough, we draw the outline
-            # of the contour (in blue)
-            if a > 100.0:
-                cv2.drawContours(cv_image, c, -1, (255, 0, 0), 3)
-
+        
         #display the image window with the open cv image
         imshow("Image window", cv_image)
         imshow("mask", identify_red)
+        imshow("HSV", mask)
         waitKey(1)
 
 rospy.init_node('run', anonymous=True)
