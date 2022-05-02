@@ -141,10 +141,9 @@ class MoveColour:
             twist.angular.z = -float(err) / 100
             print(twist.angular.z)
             self.publisher.publish(twist)
-        else:
-            twist.angular.z = 0
-            twist.linear.x = 0
-            self.publisher.publish(twist)
+        #else:
+            #twist.angular.z = 0.2
+            #self.publisher.publish(twist)
         #display the image window with the open cv image
         
         imshow("mask", identify_red)
