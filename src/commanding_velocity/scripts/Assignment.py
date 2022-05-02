@@ -59,7 +59,7 @@ class MoveColour:
 
         #mask = cv2.bitwise_and(cv_image, cv_image, mask=mask)
         #crete  mask lookign for colours between the ranges given
-        identify_red = cv2.inRange(cv_image, low_red, red)
+        self.identify_red = cv2.inRange(cv_image, low_red, red)
         identify_green = cv2.inRange(cv_image, low_green, green)
         identify_blue = cv2.inRange(hsv_img, darkblue, blue)
         identify_yellow = cv2.inRange(hsv_img, lower_yellow, upper_yellow)
@@ -80,14 +80,13 @@ class MoveColour:
         mask[search_bot:x, 0:y] = 0
 
         #create variable for identifying moments in the given mask
-        R = cv2.moments(identify_red)
+        R = cv2.moments(self.identify_red)
         G = cv2.moments(identify_green)
         B = cv2.moments(identify_blue)
         Y = cv2.moments(identify_yellow)
 
 
         if R['m00'] > 0:
-            # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
             #captures certain moments of the image
             cx = int(R['m10']/R['m00'])
             cy = int(R['m01']/R['m00'])
@@ -105,8 +104,9 @@ class MoveColour:
             print(twist.angular.z)
             #publish the twist movement
             self.publisher.publish(twist)
+
         elif G['m00'] > 0:
-            # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
+            # 
             cx = int(G['m10']/G['m00'])
             cy = int(G['m01']/G['m00'])
             #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
@@ -117,8 +117,8 @@ class MoveColour:
             twist.angular.z = -float(err) / 100
             print(twist.angular.z)
             self.publisher.publish(twist)
+
         elif B['m00'] > 0:
-            # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
             cx = int(G['m10']/G['m00'])
             cy = int(G['m01']/G['m00'])
             #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
@@ -129,8 +129,8 @@ class MoveColour:
             twist.angular.z = -float(err) / 100
             print(twist.angular.z)
             self.publisher.publish(twist)
+
         elif Y['m00'] > 0:
-            # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
             cx = int(G['m10']/G['m00'])
             cy = int(G['m01']/G['m00'])
             #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
@@ -146,7 +146,7 @@ class MoveColour:
             #self.publisher.publish(twist)
         #display the image window with the open cv image
         
-        imshow("mask", identify_red)
+        imshow("mask", self.identify_red)
         #imshow("HSV", mask)
         imshow("Image window", cv_image)
         waitKey(1)
@@ -154,6 +154,7 @@ class MoveColour:
     def Dodge_walls(self, laser_msg):
 
         if laser_msg.ranges[25] < 1.0:
+            
             t = Twist()
             t.angular.z = 0.5
             self.publisher.publish(t)
