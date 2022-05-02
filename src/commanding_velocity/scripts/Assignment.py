@@ -58,9 +58,6 @@ class MoveColour:
         #mask = cv2.bitwise_and(cv_image, cv_image, mask=mask)
         #crete  mask lookign for colours between the ranges given
         identify_red = cv2.inRange(cv_image, low_red, red)
-      
-
-        #cv2.bitwise_and(cv_image, cv_image, mask=identify_red)
         identify_green = cv2.inRange(cv_image, low_green, green)
         #identify_blue = inRange(hsv_img, darkblue, blue)
         #identify_yellow = inRange(hsv_img, lower_yellow, upper_yellow)
@@ -108,18 +105,20 @@ class MoveColour:
             twist.angular.z = -float(err) / 100
             print(twist.angular.z)
             self.publisher.publish(twist)
-        elif G ['m00'] == 0:
+        
+        
+        if G ['m00'] == 0:
+            if R['m00'] == 0:
             
-            #cx = int(G['m10']/G['m00'])
+                #cx = int(G['m10']/G['m00'])
+                #err = cx - y/2
+                #twist.linear.x = 0.2
+                twist.angular.z = 0.2
+                print(twist.angular.z)
+                self.publisher.publish(twist)
 
-            #err = cx - y/2
-            #twist.linear.x = 0.2
-            twist.angular.z = 0.2
-            print(twist.angular.z)
-            self.publisher.publish(twist)
-
-            print("searching for colour")
-            
+                print("searching for colour")
+                
         #display the image window with the open cv image
         imshow("Image window", cv_image)
         imshow("mask", identify_red)
