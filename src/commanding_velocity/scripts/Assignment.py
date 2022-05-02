@@ -17,6 +17,8 @@ class MoveColour:
 
         #Movement publisher
         self.publisher = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=1)
+        
+        self.scan_area_sub = rospy.Subscriber('/scan', LaserScan, self.Dodge_walls)
 
         print("intialising")
 
@@ -58,15 +60,13 @@ class MoveColour:
         #mask = cv2.bitwise_and(cv_image, cv_image, mask=mask)
         #crete  mask lookign for colours between the ranges given
         identify_red = cv2.inRange(cv_image, low_red, red)
-      
-
-        #cv2.bitwise_and(cv_image, cv_image, mask=identify_red)
         identify_green = cv2.inRange(cv_image, low_green, green)
-        #identify_blue = inRange(hsv_img, darkblue, blue)
-        #identify_yellow = inRange(hsv_img, lower_yellow, upper_yellow)
+        identify_blue = cv2.inRange(hsv_img, darkblue, blue)
+        identify_yellow = cv2.inRange(hsv_img, lower_yellow, upper_yellow)
 
         #getting the dimensions of the image
         x, y, z = cv_image.shape
+        #define twist variable
         twist = Twist()
 
         #Search the image
@@ -79,22 +79,31 @@ class MoveColour:
         mask[0:search_top, 0:y] = 0
         mask[search_bot:x, 0:y] = 0
 
+        #create variable for identifying moments in the given mask
         R = cv2.moments(identify_red)
         G = cv2.moments(identify_green)
-        
+        B = cv2.moments(identify_blue)
+        Y = cv2.moments(identify_yellow)
+
+
         if R['m00'] > 0:
             # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
             #captures certain moments of the image
             cx = int(R['m10']/R['m00'])
             cy = int(R['m01']/R['m00'])
+            #draw circle on the screen in the middle of the mask
             #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
             print("red - turning")
 
+            #the error rate for moving away from the colour
             err = cx - y/2
+            #Move the bot forward
             twist.linear.x = 0.2
+            #turn the bot away from the colour (by using the error rate / 100)
             twist.angular.z = float(err) / 100
+            #print the turning angle to cosole
             print(twist.angular.z)
-
+            #publish the twist movement
             self.publisher.publish(twist)
         elif G['m00'] > 0:
             # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
@@ -102,20 +111,57 @@ class MoveColour:
             cy = int(G['m01']/G['m00'])
             #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
             print("green - moving to")
-
+            #the error rate for moving to the colour
+            err = cx - y/2
+            twist.linear.x = 0.2
+            twist.angular.z = -float(err) / 100
+            print(twist.angular.z)
+            self.publisher.publish(twist)
+        elif B['m00'] > 0:
+            # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
+            cx = int(G['m10']/G['m00'])
+            cy = int(G['m01']/G['m00'])
+            #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
+            print("green - moving to")
+            #the error rate for moving to the colour
+            err = cx - y/2
+            twist.linear.x = 0.2
+            twist.angular.z = -float(err) / 100
+            print(twist.angular.z)
+            self.publisher.publish(twist)
+        elif Y['m00'] > 0:
+            # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
+            cx = int(G['m10']/G['m00'])
+            cy = int(G['m01']/G['m00'])
+            #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
+            print("green - moving to")
+            #the error rate for moving to the colour
             err = cx - y/2
             twist.linear.x = 0.2
             twist.angular.z = -float(err) / 100
             print(twist.angular.z)
             self.publisher.publish(twist)
         else:
-            twist.angular.z = 0.2
+            twist.angular.z = 0
+            twist.linear.x = 0
             self.publisher.publish(twist)
         #display the image window with the open cv image
-        imshow("Image window", cv_image)
+        
         imshow("mask", identify_red)
-        imshow("HSV", mask)
+        #imshow("HSV", mask)
+        imshow("Image window", cv_image)
         waitKey(1)
+
+    def Dodge_walls(self, laser_msg):
+
+        if laser_msg.ranges[25] < 1.0:
+            t = Twist()
+            t.angular.z = 0.5
+            self.publisher.publish(t)
+        else:
+            t = Twist()
+            t.linear.x = 0.5
+            self.publisher.publish(t)
 
 rospy.init_node('run', anonymous=True)
 run = MoveColour()
