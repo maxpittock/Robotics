@@ -84,7 +84,7 @@ class MoveColour:
         
         if R['m00'] > 0:
             # check https://docs.opencv.org/3.4/d8/d23/classcv_1_1Moments.html
-            #captures certain moments of the image
+            #captures certain moments of the image - 
             cx = int(R['m10']/R['m00'])
             cy = int(R['m01']/R['m00'])
             #cv2.circle(cv_image, (cx, cy), 20, (0, 0, 255), -1)
@@ -108,9 +108,18 @@ class MoveColour:
             twist.angular.z = -float(err) / 100
             print(twist.angular.z)
             self.publisher.publish(twist)
-        else:
+        elif G ['m00'] == 0:
+            
+            #cx = int(G['m10']/G['m00'])
+
+            #err = cx - y/2
+            #twist.linear.x = 0.2
             twist.angular.z = 0.2
+            print(twist.angular.z)
             self.publisher.publish(twist)
+
+            print("searching for colour")
+            
         #display the image window with the open cv image
         imshow("Image window", cv_image)
         imshow("mask", identify_red)
