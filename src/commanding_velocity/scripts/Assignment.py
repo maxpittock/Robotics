@@ -18,6 +18,10 @@ class MoveColour:
         #Movement publisher
         self.publisher = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=1)
 
+        self.scan_area_sub = rospy.Subscriber('/scan', LaserScan, self.Dodge_walls)
+
+        #self.turning_info_sub = rospy.Subscriber("/")
+
         print("intialising")
 
     def visualise_colours(self, data):
@@ -34,7 +38,6 @@ class MoveColour:
 
         #create another colour space for indetifying colours
         hsv_img = cvtColor(cv_image, COLOR_BGR2HSV)
-        img = cvtColor(cv_image, COLOR_BGR2HSV)
         #numpy arry for colour ranges 
         #all
         all = numpy.array([255, 255, 255])
@@ -105,25 +108,23 @@ class MoveColour:
             twist.angular.z = -float(err) / 100
             print(twist.angular.z)
             self.publisher.publish(twist)
+        elif G['m00'] == 0:
         
+            print("Searching for colour")
+            twist.angular.z = 0.2
+            print(twist.angular.z)
+            self.publisher.publish(twist)
         
-        if G ['m00'] == 0:
-            if R['m00'] == 0:
-            
-                #cx = int(G['m10']/G['m00'])
-                #err = cx - y/2
-                #twist.linear.x = 0.2
-                twist.angular.z = 0.2
-                print(twist.angular.z)
-                self.publisher.publish(twist)
-
-                print("searching for colour")
-                
-        #display the image window with the open cv image
-        imshow("Image window", cv_image)
-        imshow("mask", identify_red)
-        imshow("HSV", mask)
-        waitKey(1)
+    def Dodge_walls(self, laser_msg):
+        
+        if laser_msg.ranges[50] < 1.0:
+            t = Twist()
+            t.angular.z = 1.0
+            self.publisher.publish(t)
+        else:
+            t = Twist()
+            t.linear.x = 1.0
+            self.publisher.publish(t)
 
 rospy.init_node('run', anonymous=True)
 run = MoveColour()
