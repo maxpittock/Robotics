@@ -1,3 +1,4 @@
+from math import fabs
 import rospy
 import cv2
 from cv2 import COLOR_BGR2HSV, waitKey, namedWindow, cvtColor, imshow,findContours,RETR_TREE, CHAIN_APPROX_SIMPLE
@@ -87,7 +88,7 @@ class MoveColour:
         mask[search_bot:self.x, 0:self.y] = 0
 
         #cuts out part of the image so that the robot isnt identified
-        self.identify_yellow[0:self.x,:(self.y/3)] = 0
+        self.identify_yellow[0:self.x,:(self.y/2)] = 0
         #create variable for identifying moments in the given mask
         self.R = cv2.moments(self.identify_red)
         self.G = cv2.moments(identify_green)
@@ -102,20 +103,20 @@ class MoveColour:
 
     def Movement(self, laser_msg):
 
-        blue_on = True
+        
+        yellow_on = False
         Wall = False
 
         j = len(laser_msg.ranges)
         if laser_msg.ranges[j-1] > 1.0:
+            blue_on = True
             print("Searching!")
-            
             self.twist.linear.x = 0
             self.twist.angular.z = 0.2
             self.publisher.publish(self.twist)
-
+        
             if self.B['m00'] > 0:
-                
-                blue_on = True
+
                 cx = int(self.B['m10']/self.B['m00'])
                 cy = int(self.B['m01']/self.B['m00'])
                 cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
@@ -125,29 +126,35 @@ class MoveColour:
                 print(err, "error rate")
 
                 self.twist.linear.x = 0.2
-                self.twist.angular.z = -float(err) / 1000
+                self.twist.angular.z = -float(err) / 1250
                 print(self.twist.angular.z)
                 self.publisher.publish(self.twist)
 
-        else:
+            if laser_msg.ranges[j-1] < 0.6:
+                blue_on = False
+                print(yellow_on, "yellow bool")
 
-            #if self.twist.angular.z > 0:
-            #    self.twist.linear.x = 0
-            #    self.twist.angular.z = 0.2
-            #    self.publisher.publish(self.twist)
-            #else:
-            #    self.twist.linear.x = 0
-            #    self.twist.angular.z = -0.2
-            #    self.publisher.publish(self.twist)
-            
-            print("Walllll!")
+        else:
             blue_on = False
+            print(blue_on, "bool")
+            if yellow_on == False:
+
+                if self.twist.angular.z > 0:
+                    self.twist.linear.x = 0
+                    self.twist.angular.z = 0.2
+                    self.publisher.publish(self.twist)
+                else:
+                    self.twist.linear.x = 0
+                    self.twist.angular.z = -0.2
+                    self.publisher.publish(self.twist)
+                print("Walllll!")
+            
             Wall = True
             #blue_on = False
 
         if blue_on == False:
             if self.Y['m00'] > 0:
-    
+
                 cx = int(self.Y['m10']/self.Y['m00'])
                 cy = int(self.Y['m01']/self.Y['m00'])
                 cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
@@ -155,14 +162,16 @@ class MoveColour:
                 #the error rate for moving to the colour
                 err = cx - self.y/2
                 self.twist.linear.x = 0.2
-                self.twist.angular.z = -float(err) / 250
+                self.twist.angular.z = -float(err) / 1000
                 print(self.twist.angular.z, "Angular speed")
                 print(self.twist.linear.x, "linear speed")
                 self.publisher.publish(self.twist)
-            
-       
+                yellow_on = True
+            else:
+                yellow_on = False
+
 #red and green shit
-        if laser_msg.ranges[j-1] < 1.0:
+        if laser_msg.ranges[j-1] < 2:
             if self.R['m00'] > 0:
             #captures certain moments of the image
                 cx = int(self.R['m10']/self.R['m00'])
