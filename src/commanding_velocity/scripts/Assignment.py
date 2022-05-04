@@ -79,13 +79,18 @@ class MoveColour:
         #width of search area
         search_bot = search_top + 20
 
+        print(search_bot, search_top, "search values")
+        print(self.x, self.y, self.z, "dimensions")
+
         #cuts out part of the image so that the robot isnt identified
         mask[0:search_top, 0:self.y] = 0
         mask[search_bot:self.x, 0:self.y] = 0
 
         #cuts out part of the image so that the robot isnt identified
-        self.identify_yellow[:search_top, 0:self.y] = 0
-        self.identify_yellow[search_bot:self.x, 0:self.y] = 0
+        #first 2 numbers is the height of the rectangle
+        self.identify_yellow[0:400, 0:640] = 0
+
+        self.identify_yellow[400:0, 640:0] = 0
 
         #create variable for identifying moments in the given mask
         self.R = cv2.moments(self.identify_red)
@@ -150,7 +155,7 @@ class MoveColour:
                 
                 cx = int(self.Y['m10']/self.Y['m00'])
                 cy = int(self.Y['m01']/self.Y['m00'])
-                #cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
+                cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
                 print("yellow - following line")
                 #the error rate for moving to the colour
                 err = cx - self.y/2
