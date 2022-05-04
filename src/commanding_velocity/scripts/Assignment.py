@@ -87,54 +87,14 @@ class MoveColour:
         mask[search_bot:self.x, 0:self.y] = 0
 
         #cuts out part of the image so that the robot isnt identified
-        #first 2 numbers is the height of the rectangle
-        #self.identify_yellow[0:400, 0:640] = 0
-        #self.identify_yellow[400:0, 640:0] = 0
         self.identify_yellow[0:self.x,:(self.y/3)] = 0
         #create variable for identifying moments in the given mask
         self.R = cv2.moments(self.identify_red)
         self.G = cv2.moments(identify_green)
         self.B = cv2.moments(identify_blue)
         self.Y = cv2.moments(self.identify_yellow)
-
-
-        #if self.R['m00'] > 0:
-            #captures certain moments of the image
-        #    cx = int(R['m10']/R['m00'])
-        #    cy = int(R['m01']/R['m00'])
-            #draw circle on the screen in the middle of the mask
-            #cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
-        #    print("red - turning")
-
-            #the error rate for moving away from the colour
-        #    err = cx - y/2
-            #Move the bot forward
-        #    self.twist.linear.x = 0.2
-            #turn the bot away from the colour (by using the error rate / 100)
-        #    self.twist.angular.z = float(err) / 100
-            #print the turning angle to cosole
-        #    print(self.twist.angular.z)
-            #publish the self.twist movement
-
-        #elif self.G['m00'] > 0:
-            # 
-        #    cx = int(G['m10']/G['m00'])
-        #    cy = int(G['m01']/G['m00'])
-        #    #cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
-        #    print("green - moving to")
-        #    #the error rate for moving to the colour
-        #    err = cx - y/2
-        #    self.twist.linear.x = 0.2
-        #    self.twist.angular.z = -float(err) / 100
-        #    print(self.twist.angular.z)
-            #self.publisher.publish(self.twist)
-
         
-        #else:
-            #self.twist.angular.z = 0.2
-            #self.publisher.publish(self.twist)
         #display the image window with the open cv image
-        
         imshow("mask", mask)
         imshow("Image window", self.cv_image)
         imshow("HSV", self.identify_yellow)
@@ -142,17 +102,17 @@ class MoveColour:
 
     def Movement(self, laser_msg):
 
-        blue_on = False
+        blue_on = True
         Wall = False
 
         j = len(laser_msg.ranges)
-        if laser_msg.ranges[j-1] > 1:
+        if laser_msg.ranges[j-1] > 1.0:
             print("Searching!")
+            
             self.twist.linear.x = 0
             self.twist.angular.z = 0.2
             self.publisher.publish(self.twist)
 
-           
             if self.B['m00'] > 0:
                 
                 blue_on = True
@@ -165,28 +125,27 @@ class MoveColour:
                 print(err, "error rate")
 
                 self.twist.linear.x = 0.2
-                self.twist.angular.z = -float(err) / 2000
+                self.twist.angular.z = -float(err) / 1000
                 print(self.twist.angular.z)
                 self.publisher.publish(self.twist)
-        
+
         else:
 
-            if self.twist.angular.z > 0:
-                self.twist.linear.x = 0
-                self.twist.angular.z = 0.2
-                self.publisher.publish(self.twist)
-            else:
-                self.twist.linear.x = 0
-                self.twist.angular.z = -0.2
-                self.publisher.publish(self.twist)
+            #if self.twist.angular.z > 0:
+            #    self.twist.linear.x = 0
+            #    self.twist.angular.z = 0.2
+            #    self.publisher.publish(self.twist)
+            #else:
+            #    self.twist.linear.x = 0
+            #    self.twist.angular.z = -0.2
+            #    self.publisher.publish(self.twist)
             
             print("Walllll!")
+            blue_on = False
             Wall = True
             #blue_on = False
 
         if blue_on == False:
-
-            
             if self.Y['m00'] > 0:
     
                 cx = int(self.Y['m10']/self.Y['m00'])
@@ -196,12 +155,46 @@ class MoveColour:
                 #the error rate for moving to the colour
                 err = cx - self.y/2
                 self.twist.linear.x = 0.2
-                self.twist.angular.z = -float(err) / 500
+                self.twist.angular.z = -float(err) / 250
                 print(self.twist.angular.z, "Angular speed")
                 print(self.twist.linear.x, "linear speed")
                 self.publisher.publish(self.twist)
             
        
+#red and green shit
+        if laser_msg.ranges[j-1] < 1.0:
+            if self.R['m00'] > 0:
+            #captures certain moments of the image
+                cx = int(self.R['m10']/self.R['m00'])
+                cy = int(self.R['m01']/self.R['m00'])
+                #draw circle on the screen in the middle of the mask
+                cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
+                print("red - turning")
+
+                #the error rate for moving away from the colour
+                err = cx - self.y/2
+                #Move the bot forward
+                self.twist.linear.x = 0.2
+                #turn the bot away from the colour (by using the error rate / 100)
+                self.twist.angular.z = float(err) / 1000
+                #print the turning angle to cosole
+                print(self.twist.angular.z)
+                #publish the self.twist movement
+                self.publisher.publish(self.twist)
+            
+            if self.G['m00'] > 0:
+            
+                cx = int(self.G['m10']/self.G['m00'])
+                cy = int(self.G['m01']/self.G['m00'])
+                #cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
+                print("green - moving to")
+                #the error rate for moving to the colour
+                err = cx - self.y/2
+                self.twist.linear.x = 0.2
+                self.twist.angular.z = -float(err) / 100
+                print(self.twist.angular.z)
+                self.publisher.publish(self.twist)
+        
 
 rospy.init_node('run', anonymous=True)
 run = MoveColour()
