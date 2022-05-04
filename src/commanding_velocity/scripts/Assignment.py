@@ -56,8 +56,8 @@ class MoveColour:
         blue = numpy.array([255, 0, 0])
         darkblue = numpy.array([100, 0, 0])
         #yellow
-        lower_yellow = numpy.array([10, 60, 170])
-        upper_yellow = numpy.array([255, 255, 255])
+        lower_yellow = numpy.array([0, 100, 100])
+        upper_yellow = numpy.array([0, 255, 255])
 
         mask = cv2.inRange(self.cv_image, low_all, all)
 
@@ -88,10 +88,9 @@ class MoveColour:
 
         #cuts out part of the image so that the robot isnt identified
         #first 2 numbers is the height of the rectangle
-        self.identify_yellow[0:400, 0:640] = 0
-
-        self.identify_yellow[400:0, 640:0] = 0
-
+        #self.identify_yellow[0:400, 0:640] = 0
+        #self.identify_yellow[400:0, 640:0] = 0
+        self.identify_yellow[0:self.x,:(self.y/3)] = 0
         #create variable for identifying moments in the given mask
         self.R = cv2.moments(self.identify_red)
         self.G = cv2.moments(identify_green)
@@ -144,15 +143,52 @@ class MoveColour:
     def Movement(self, laser_msg):
 
         blue_on = False
+        Wall = False
 
-        if laser_msg.ranges[50] > 1.0:
-            
+        j = len(laser_msg.ranges)
+        if laser_msg.ranges[j-1] > 1:
             print("Searching!")
+            self.twist.linear.x = 0
             self.twist.angular.z = 0.2
             self.publisher.publish(self.twist)
 
-            if self.Y['m00'] > 0:
+           
+            if self.B['m00'] > 0:
                 
+                blue_on = True
+                cx = int(self.B['m10']/self.B['m00'])
+                cy = int(self.B['m01']/self.B['m00'])
+                cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
+                print("BLUE! - moving to")
+                ##the error rate for moving to the colour
+                err = cx - self.y/2
+                print(err, "error rate")
+
+                self.twist.linear.x = 0.2
+                self.twist.angular.z = -float(err) / 2000
+                print(self.twist.angular.z)
+                self.publisher.publish(self.twist)
+        
+        else:
+
+            if self.twist.angular.z > 0:
+                self.twist.linear.x = 0
+                self.twist.angular.z = 0.2
+                self.publisher.publish(self.twist)
+            else:
+                self.twist.linear.x = 0
+                self.twist.angular.z = -0.2
+                self.publisher.publish(self.twist)
+            
+            print("Walllll!")
+            Wall = True
+            #blue_on = False
+
+        if blue_on == False:
+
+            
+            if self.Y['m00'] > 0:
+    
                 cx = int(self.Y['m10']/self.Y['m00'])
                 cy = int(self.Y['m01']/self.Y['m00'])
                 cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
@@ -160,38 +196,11 @@ class MoveColour:
                 #the error rate for moving to the colour
                 err = cx - self.y/2
                 self.twist.linear.x = 0.2
-                self.twist.angular.z = -float(err) / 200
+                self.twist.angular.z = -float(err) / 500
                 print(self.twist.angular.z, "Angular speed")
                 print(self.twist.linear.x, "linear speed")
                 self.publisher.publish(self.twist)
-
-                if self.B['m00'] > 0:
-                    
-                    blue_on = True
-
-                    cx = int(self.B['m10']/self.B['m00'])
-                    cy = int(self.B['m01']/self.B['m00'])
-                    cv2.circle(self.cv_image, (cx, cy), 20, (0, 0, 255), -1)
-                    print("BLUE! - moving to")
-                    ##the error rate for moving to the colour
-                    err = cx - self.y/2
-                    print(err, "error rate")
-
-                    self.twist.linear.x = 0.2
-                    self.twist.angular.z = -float(err) / 150
-                    print(self.twist.angular.z)
-                    self.publisher.publish(self.twist)
-        else:
-            self.twist.linear.x = 0
-            self.twist.angular.z = 0.2
-            self.publisher.publish(self.twist)
-            print("Walllll!")
-            blue_on = False
-
-
             
-            
-                
        
 
 rospy.init_node('run', anonymous=True)
